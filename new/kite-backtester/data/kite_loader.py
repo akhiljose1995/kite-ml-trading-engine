@@ -54,6 +54,7 @@ class KiteDataLoader:
             continuous=False
         )
         df = pd.DataFrame(data)
-        df.set_index("date", inplace=True)
+        df["interval"] = interval
+        #df.set_index("date", inplace=True)
         return df
 

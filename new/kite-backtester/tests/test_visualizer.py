@@ -5,7 +5,9 @@ from strategy.ema_crossover import EMACrossoverStrategy
 from portfolio.portfolio import Portfolio
 from report.visualizer import EquityCurvePlot
 import config
-
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 
 def get_real_equity_data():
     # Load real data

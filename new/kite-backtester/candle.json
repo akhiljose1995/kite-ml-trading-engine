@@ -1,0 +1,62 @@
+[
+  {"name": "doji", "type": "neutral", "cdl_emotion": "indecision", "cdl_strength": null, "cdl_implication": "reversal", "cdl_direction": null, "comment": "Stronger near support/resistance"},
+  
+  {"name": "hammer", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "up", "comment": "After downtrend"},
+  {"name": "inverted_hammer", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "weak", "cdl_implication": "reversal", "cdl_direction": "up", "comment": "After downtrend"},
+  {"name": "hanging_man", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "After uptrend"},
+  {"name": "shooting_star", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "After uptrend"},
+  
+  {"name": "marubozu_bullish", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": null, "comment": "Uptrend continuation"},
+  {"name": "marubozu_bearish", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": null, "comment": "Downtrend continuation"},
+  
+  {"name": "bullish_engulfing", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "reversal", "cdl_direction": "up", "comment": "After downtrend"},
+  {"name": "bearish_engulfing", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "After uptrend"},
+  
+  {"name": "piercing_pattern", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "up", "comment": "After downtrend"},
+  {"name": "dark_cloud_cover", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "After uptrend"},
+  
+  {"name": "morning_star", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "reversal", "cdl_direction": "up", "comment": ""},
+  {"name": "evening_star", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "reversal", "cdl_direction": "down", "comment": ""},
+  
+  {"name": "morning_doji_star", "type": "bullish", "cdl_emotion": "indecision", "cdl_strength": "strong", "cdl_implication": "reversal", "cdl_direction": "up", "comment": ""},
+  {"name": "evening_doji_star", "type": "bearish", "cdl_emotion": "indecision", "cdl_strength": "strong", "cdl_implication": "reversal", "cdl_direction": "down", "comment": ""},
+  
+  {"name": "three_white_soldiers", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": "up", "comment": ""},
+  {"name": "three_black_crows", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": "down", "comment": ""},
+  
+  {"name": "bullish_harami", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "up", "comment": ""},
+  {"name": "bearish_harami", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "down", "comment": ""},
+  {"name": "bullish_kicker", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "reversal", "cdl_direction": "up", "comment": "Gap-based"},
+  {"name": "bearish_kicker", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "Gap-based"},
+  
+  {"name": "bullish_belt_hold", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "up", "comment": ""},
+  {"name": "bearish_belt_hold", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "down", "comment": ""},
+  
+  {"name": "tweezer_bottom", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "up", "comment": "Equal lows"},
+  {"name": "tweezer_top", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "Equal highs"},
+  
+  {"name": "upside_gap_two_crows", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "Rare pattern"},
+  {"name": "two_black_gapping", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": "down", "comment": ""},
+  
+  {"name": "abandoned_baby_bullish", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "reversal", "cdl_direction": "up", "comment": "Bullish reversal with gap-down and gap-up around a doji"},
+  {"name": "abandoned_baby_bearish", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "Bearish reversal with gap-up and gap-down around a doji"},
+  
+  {"name": "separating_lines_bullish", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": "up", "comment": ""},
+  {"name": "separating_lines_bearish", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": "down", "comment": ""},
+  
+  {"name": "thrusting", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "weak", "cdl_implication": "continuation", "cdl_direction": "down", "comment": ""},
+  {"name": "counterattack", "type": "depends", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": null, "comment": "Depends on trend"},
+  {"name": "deliberation", "type": "bearish", "cdl_emotion": "indecision", "cdl_strength": "weak", "cdl_implication": "reversal", "cdl_direction": "down", "comment": ""},
+  
+  {"name": "tristar_bullish", "type": "bullish", "cdl_emotion": "indecision", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "up", "comment": "3 doji setup"},
+  {"name": "tristar_bearish", "type": "bearish", "cdl_emotion": "indecision", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "3 doji setup"},
+  
+  {"name": "mat_hold_bullish", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": "up", "comment": "Strong uptrend continuation with temporary pullback"},
+  {"name": "mat_hold_bearish", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": "down", "comment": "Strong downtrend continuation with temporary pullback"},
+  
+  {"name": "rising_three_methods", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "continuation", "cdl_direction": "up", "comment": "Small pullback candles between large bullish candles"},
+  {"name": "falling_three_methods", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "continuation", "cdl_direction": "down", "comment": "Small pullback candles between large bearish candles"},
+  
+  {"name": "advance_block", "type": "bearish", "cdl_emotion": "indecision", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "Weakened bullish momentum after strong start"},
+  {"name": "stalled_pattern", "type": "bearish", "cdl_emotion": "indecision", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "Stalling of uptrend momentum before reversal"}
+]

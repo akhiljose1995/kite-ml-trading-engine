@@ -15,7 +15,14 @@ if __name__ == "__main__":
         "kiteconnect",
         "pandas",
         "matplotlib",
-        "pytest"
+        "pytest",
+        "scipy",
+        "numpy",
+        "ta",  # Technical Analysis library
+        "scikit-learn",  # For machine learning models
+        "statsmodels",  # For statistical models
+        "requests",  # For HTTP requests
+        "tabulate"  # For pretty-printing tables
     ]
 
     for pkg in packages:
