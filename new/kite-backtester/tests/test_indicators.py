@@ -58,7 +58,7 @@ def test_adx_indicator(kite_data):
     adx_period = 14
     adx = ADXIndicator(period=adx_period)
     result = adx.compute(kite_data)
-    col_names = [f"ADX_{adx_period}", f"+DI_{adx_period}", f"-DI_{adx_period}"]
+    col_names = [f"ADX_{adx_period}", f"PDI_{adx_period}", f"NDI_{adx_period}"]
     print(result.reset_index()[["date"] + col_names])
     assert all(col in result.columns for col in col_names)
     print(result.columns)

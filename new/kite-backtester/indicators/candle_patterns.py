@@ -13,6 +13,9 @@ class CandlePatternDetector:
         self.df['CDL_high'] = np.nan
         self.df['CDL_low'] = np.nan
         self.df['CDL_close'] = np.nan
+        self.df['CDL_body_size'] = np.nan
+        self.df['CDL_shadow_ratio'] = np.nan
+        self.df['range_to_body_ratio'] = np.nan
 
         patterns = [
             self.doji,
@@ -113,17 +116,34 @@ class CandlePatternDetector:
             self.df.loc[mask, 'CDL_high'] = h
             self.df.loc[mask, 'CDL_low'] = l
             self.df.loc[mask, 'CDL_close'] = c
+            body_size = self.body(o, c)
+            self.df.loc[mask, 'CDL_body_size'] = body_size/c
+            
+            # Calculate shadow sizes
+            upper_shadow = h - np.maximum(o, c)
+            lower_shadow = np.minimum(o, c) - l
+            shadow_total = upper_shadow + lower_shadow
+            # Avoid division by zero
+            with np.errstate(divide='ignore', invalid='ignore'):
+                shadow_ratio = np.where(body_size != 0, shadow_total / body_size, 0)
+
+            self.df.loc[mask, 'CDL_shadow_ratio'] = shadow_ratio[mask]
 
             if candle_type == "single":
-                self.df.loc[mask, 'single_candle'] = pattern_name
-                # Only write to Candle column if it's still empty (i.e., no multi written yet)
-                self.df.loc[mask & self.df['candle'].isna(), 'candle'] = pattern_name
+                self.df.loc[mask, 'single_candle'] = pattern_name            
 
             elif candle_type == "multi":
                 self.df.loc[mask, 'multi_candle'] = pattern_name
-                # Always overwrite with multi pattern
-                self.df.loc[mask, 'candle'] = pattern_name
+                
+            # Fill self.df['candle'] with the pattern name prioritize multi_candle over single_candle
+            # If both are present, use multi_candle
+            self.df['candle'] = self.df['multi_candle'].combine_first(self.df['single_candle'])
 
+        #Fill "single_candle" and "multi_candle" null values with "unkown"
+        self.df['single_candle'].fillna('unknown', inplace=True)
+        self.df['multi_candle'].fillna('unknown', inplace=True)
+        self.df['candle'].fillna('unknown', inplace=True)
+        self.df['range_to_body_ratio'] = ((self.df['high'] - self.df['low']) / (abs(self.df['open'] - self.df['close']) + 1e-5))
         return self.df
 
     def body(self, o, c):
@@ -286,9 +306,9 @@ class CandlePatternDetector:
                 self.evening_star()[2], self.evening_star()[3], self.evening_star()[4], self.evening_star()[5]
 
     def three_white_soldiers(self):
-        a = self.df.shift(2)  # First candle
-        b = self.df.shift(1)  # Second candle
-        c = self.df           # Third candle
+        a = self.df.shift(1)  # First candle
+        b = self.df           # Second candle
+        c = self.df.shift(-1) # Third candle
 
         pattern_mask = (
             (a['close'] > a['open']) &
@@ -303,9 +323,9 @@ class CandlePatternDetector:
         return "three_white_soldiers", pattern_mask, c['open'], c['high'], c['low'], c['close']
 
     def three_black_crows(self):
-        a = self.df.shift(2)  # First candle
-        b = self.df.shift(1)  # Second candle
-        c = self.df           # Third candle
+        a = self.df.shift(1)  # First candle
+        b = self.df           # Second candle
+        c = self.df.shift(-1) # Third candle
 
         pattern_mask = (
             (a['close'] < a['open']) &
@@ -341,32 +361,34 @@ class CandlePatternDetector:
 
     def bullish_kicker(self):
         prev = self.df.shift(1)
-        gap = self.df['open'] - prev['close']
         body_prev = abs(prev['close'] - prev['open'])
 
-        abs_gap = gap > 0.1 * body_prev
+        # Classic kicker: open ABOVE previous open (not just close)
+        gap_up = self.df['open'] > prev['open']
+        significant_gap = (self.df['open'] - prev['close']) > 0.1 * body_prev
 
         return "bullish_kicker", (
-            (prev['close'] < prev['open']) &              # Previous candle bearish
-            (self.df['open'] > prev['close']) &           # Gap up
-            (self.df['close'] > self.df['open']) &        # Current candle bullish
-            abs_gap                                       # Significant gap
+            (prev['close'] < prev['open']) &      # Previous candle bearish
+            gap_up &                              # Gap above previous open
+            (self.df['close'] > self.df['open']) &# Current candle bullish
+            significant_gap                       # Ensure gap is notable
         ), self.df['open'], self.df['high'], self.df['low'], self.df['close']
 
 
     def bearish_kicker(self):
         prev = self.df.shift(1)
-        gap = prev['close'] - self.df['open']
         body_prev = abs(prev['close'] - prev['open'])
 
-        abs_gap = gap > 0.1 * body_prev
+        gap_down = self.df['open'] < prev['open']
+        significant_gap = (prev['close'] - self.df['open']) > 0.1 * body_prev
 
         return "bearish_kicker", (
-            (prev['close'] > prev['open']) &              # Previous candle bullish
-            (self.df['open'] < prev['close']) &           # Gap down
-            (self.df['close'] < self.df['open']) &        # Current candle bearish
-            abs_gap                                       # Significant gap
+            (prev['close'] > prev['open']) &      # Previous candle bullish
+            gap_down &                            # Gap below previous open
+            (self.df['close'] < self.df['open']) &# Current candle bearish
+            significant_gap                       # Ensure gap is notable
         ), self.df['open'], self.df['high'], self.df['low'], self.df['close']
+
 
     def bullish_belt_hold(self):
         body = self.df['close'] - self.df['open']
@@ -409,9 +431,9 @@ class CandlePatternDetector:
         ), self.df['open'], self.df['high'], self.df['low'], self.df['close']
 
     def upside_gap_two_crows(self):
-        a = self.df.shift(2)  # First candle (bullish)
-        b = self.df.shift(1)  # Second candle (bearish with gap up)
-        c = self.df           # Third candle (bearish)
+        a = self.df.shift(1)  # First candle (bullish)
+        b = self.df           # Second candle (bearish with gap up)
+        c = self.df.shift(-1) # Third candle (bearish)
 
         gap1 = b['open'] - a['close']
         gap2 = c['open'] - b['open']
@@ -427,9 +449,9 @@ class CandlePatternDetector:
         ), c['open'], c['high'], c['low'], c['close']
 
     def two_black_gapping(self):
-        a = self.df.shift(2)  # Candle -2 (prior trend)
-        b = self.df.shift(1)  # Candle -1 (first black candle)
-        c = self.df           # Candle 0 (second black candle)
+        a = self.df.shift(1)  # Candle -1 (prior trend)
+        b = self.df           # Candle 0 (first black candle)
+        c = self.df.shift(-1) # Candle 1 (second black candle)
 
         pattern = (
             (b['close'] < b['open']) &                    # Candle -1 is bearish
@@ -541,9 +563,9 @@ class CandlePatternDetector:
         ), self.df['open'], self.df['high'], self.df['low'], self.df['close']
 
     def deliberation(self):
-        a = self.df.shift(2)
-        b = self.df.shift(1)
-        c = self.df
+        a = self.df.shift(1)
+        b = self.df
+        c = self.df.shift(-1)
 
         body_c = c['close'] - c['open']
         body_b = b['close'] - b['open']

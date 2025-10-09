@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import re
 from tabulate import tabulate
 from scipy.signal import argrelextrema
 import matplotlib.pyplot as plt
@@ -39,11 +40,8 @@ class DivergenceDetector:
         - result: list of dictionaries with divergence info
         """
         # Ensure datetime index
-        if not isinstance(self.df.index, pd.DatetimeIndex):
-            self.df.index = pd.to_datetime(self.df.index)
-
-        # Reset index so date becomes a column
-        self.df.reset_index(inplace=True)  # Now 'date' is a column
+        if not isinstance(self.df['date'], pd.DatetimeIndex):
+            self.df['date'] = pd.to_datetime(self.df['date'])
 
         rsi_keys = set()
         macd_keys = set()
@@ -74,8 +72,8 @@ class DivergenceDetector:
             start_idx = int(r.get('start index', r.get('index', 0)))
             end_idx = int(r.get('end index', r.get('index', 0)))
 
-            start_date = self.df.loc[start_idx, 'date']
-            end_date = self.df.loc[end_idx, 'date']
+            start_date = pd.to_datetime(self.df.loc[start_idx, 'date'])
+            end_date = pd.to_datetime(self.df.loc[end_idx, 'date'])
 
             row = [
                 r.get('type', 'N/A'),
@@ -129,7 +127,8 @@ class DivergenceDetector:
         :return: List of dicts with divergence info
         """
         rsi_col = f'RSI_{period}'
-        self.df[f'RSI_{period}_Div_Type'] = np.nan
+        self.df[f'RSI_{period}_Div_Type'] = "no divergence"
+        self.df[f'RSI_{period}_Div_Length'] = 0  # Initialize divergence type column
         result = []
         used_rsi_indices_bull = set()
         used_rsi_indices_bear = set()
@@ -262,9 +261,14 @@ class DivergenceDetector:
             end = int(entry['end index'])
             div_type = entry['type']
             self.df.iloc[start:end+1, self.df.columns.get_loc(f'RSI_{period}_Div_Type')] = div_type
+            if div_type.lower() == 'bullish':
+                div_length = end - start + 1
+            else:
+                div_length = -(end - start + 1)
+            self.df.iloc[start:end+1, self.df.columns.get_loc(f'RSI_{period}_Div_Length')] = div_length
 
         # Print divergence table
-        self.print_divergence_table(result)
+        #self.print_divergence_table(result)
 
 
         #self.plot_rsi_with_divergence(self.df, divergences=result, period=period)
@@ -315,9 +319,10 @@ class DivergenceDetector:
         :return: List of dicts with divergence info
         """
         result = []
-        self.df['MACD_Div_Type'] = np.nan
-        used_rsi_indices_bull = set()
-        used_rsi_indices_bear = set()
+        self.df['MACD_Div_Type'] = "no divergence"
+        self.df['MACD_Div_Length'] = 0  # Initialize divergence type column
+        used_macd_indices_bull = set()
+        used_macd_indices_bear = set()
         macd_col = 'MACD'  # or dynamically assigned if needed
         local_min, local_max = self._find_extrema(self.df['close'], order)
         macd_min, macd_max = self._find_extrema(self.df['MACD'], order)
@@ -332,7 +337,7 @@ class DivergenceDetector:
 
             # Match price local min with MACD local min (±1 index tolerance)
             macd_curr = next((macd_idx for macd_idx in macd_min if abs(curr - macd_idx) <= 1), None)
-            if macd_curr is None or macd_curr in used_rsi_indices_bull:
+            if macd_curr is None or macd_curr in used_macd_indices_bull:
                 continue
 
             # Look ahead (from higher to lower indices)
@@ -393,7 +398,7 @@ class DivergenceDetector:
                     })
 
                     # Mark as used
-                    used_rsi_indices_bull.update(range(min(macd_curr, macd_other), max(macd_curr, macd_other) + 1))
+                    used_macd_indices_bull.update(range(min(macd_curr, macd_other), max(macd_curr, macd_other) + 1))
                     break
 
         # Bearish divergence on local maxima using MACD
@@ -402,7 +407,7 @@ class DivergenceDetector:
 
             # Match price local max with MACD local max (±1 index tolerance)
             macd_curr = next((macd_idx for macd_idx in macd_max if abs(curr - macd_idx) <= 1), None)
-            if macd_curr is None or macd_curr in used_rsi_indices_bear:
+            if macd_curr is None or macd_curr in used_macd_indices_bear:
                 continue
 
             # Look ahead (from higher to lower indices)
@@ -457,7 +462,7 @@ class DivergenceDetector:
                     })
 
                     # Mark as used
-                    used_rsi_indices_bear.update(range(min(macd_curr, macd_other), max(macd_curr, macd_other) + 1))
+                    used_macd_indices_bear.update(range(min(macd_curr, macd_other), max(macd_curr, macd_other) + 1))
                     break
         
         for entry in result:
@@ -465,7 +470,74 @@ class DivergenceDetector:
             end = int(entry['end index'])
             div_type = entry['type']
             self.df.iloc[start:end+1, self.df.columns.get_loc(f'MACD_Div_Type')] = div_type
+            if div_type.lower() == 'bullish':
+                macd_length = end - start + 1
+            else:
+                macd_length = -(end - start + 1)
+            self.df.iloc[start:end+1, self.df.columns.get_loc(f'MACD_Div_Length')] = macd_length
 
         #self.plot_macd_with_divergence(self.df, divergences=result)
-        self.print_divergence_table(result)
+        #self.print_divergence_table(result)
+        return self.df
+
+    def div_length_before_price_dir_change(self, column="RSI", order=5):
+        """
+        For each RSI period, look back at most `order+1` rows to find the most recent
+        non-zero divergence length before price direction change.
+
+        :param column: Column prefix to check (default is 'RSI')
+        :param period: Default RSI period (used if regex match fails)
+        :param order: Lookback window (checks up to `order + 1` rows behind current)
+        """
+        rsi_periods = set()
+        interval_order_dict = {
+            "5minute": 10,
+            "15minute": 7,
+            "30minute": 5,
+            "60minute": 4
+        }
+
+        if "rsi" in column.lower():
+            rsi_columns = [col for col in self.df.columns if "rsi" in col.lower()]
+            
+            for col in rsi_columns:
+                match = re.match(r'^RSI_(\d+)$', col)
+                if not match:
+                    continue
+
+                period = int(match.group(1))
+                check_col = f'RSI_{period}_Div_Length'
+
+                if check_col in self.df.columns:
+                    rsi_periods.add(period)
+                    output_col = f"RSI_{period}_Div_Len_Nearest_Past"
+                    self.df[output_col] = 0
+
+                    for idx in range(len(self.df)):
+                        order = interval_order_dict.get(self.df['interval'].iloc[idx], order)
+                        for back_idx in range(max(0, idx - (order + 1)), idx + 1)[::-1]:
+                            val = self.df.loc[back_idx, check_col]
+                            if pd.notna(val) and val != 0:
+                                self.df.loc[idx, output_col] = val
+                                break
+
+        elif "macd" in column.lower():
+            macd_columns = [col for col in self.df.columns if "macd" in col.lower()]
+            
+            for col in macd_columns:
+                match = re.match(r'^MACD_Div_Length$', col)
+                if not match:
+                    continue
+                check_col = f'MACD_Div_Length'
+                output_col = f'MACD_Div_Len_Nearest_Past'
+                self.df[output_col] = 0
+
+                for idx in range(len(self.df)):
+                    order = interval_order_dict.get(self.df['interval'].iloc[idx], order)
+                    for back_idx in range(max(0, idx - (order + 1)), idx + 1)[::-1]:
+                        val = self.df.loc[back_idx, check_col]
+                        if pd.notna(val) and val != 0:
+                            self.df.loc[idx, output_col] = val
+                            break
+            
         return self.df

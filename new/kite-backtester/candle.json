@@ -1,13 +1,15 @@
 [
-  {"name": "doji", "type": "neutral", "cdl_emotion": "indecision", "cdl_strength": null, "cdl_implication": "reversal", "cdl_direction": null, "comment": "Stronger near support/resistance"},
+  {"name": "unknown", "type": "unknown", "cdl_emotion": "unknown", "cdl_strength": "unknown", "cdl_implication": "unknown", "cdl_direction": "unknown", "comment": "unknown"},
+
+  {"name": "doji", "type": "neutral", "cdl_emotion": "indecision", "cdl_strength": "unknown", "cdl_implication": "reversal", "cdl_direction": "trend", "comment": "Stronger near support/resistance"},
   
   {"name": "hammer", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "up", "comment": "After downtrend"},
   {"name": "inverted_hammer", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "weak", "cdl_implication": "reversal", "cdl_direction": "up", "comment": "After downtrend"},
   {"name": "hanging_man", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "After uptrend"},
   {"name": "shooting_star", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "After uptrend"},
   
-  {"name": "marubozu_bullish", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": null, "comment": "Uptrend continuation"},
-  {"name": "marubozu_bearish", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": null, "comment": "Downtrend continuation"},
+  {"name": "marubozu_bullish", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": "trend", "comment": "Uptrend continuation"},
+  {"name": "marubozu_bearish", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": "trend", "comment": "Downtrend continuation"},
   
   {"name": "bullish_engulfing", "type": "bullish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "reversal", "cdl_direction": "up", "comment": "After downtrend"},
   {"name": "bearish_engulfing", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "reversal", "cdl_direction": "down", "comment": "After uptrend"},
@@ -45,7 +47,7 @@
   {"name": "separating_lines_bearish", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "strong", "cdl_implication": "continuation", "cdl_direction": "down", "comment": ""},
   
   {"name": "thrusting", "type": "bearish", "cdl_emotion": "decisive", "cdl_strength": "weak", "cdl_implication": "continuation", "cdl_direction": "down", "comment": ""},
-  {"name": "counterattack", "type": "depends", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": null, "comment": "Depends on trend"},
+  {"name": "counterattack", "type": "depends", "cdl_emotion": "decisive", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "trend", "comment": "Depends on trend"},
   {"name": "deliberation", "type": "bearish", "cdl_emotion": "indecision", "cdl_strength": "weak", "cdl_implication": "reversal", "cdl_direction": "down", "comment": ""},
   
   {"name": "tristar_bullish", "type": "bullish", "cdl_emotion": "indecision", "cdl_strength": "moderate", "cdl_implication": "reversal", "cdl_direction": "up", "comment": "3 doji setup"},

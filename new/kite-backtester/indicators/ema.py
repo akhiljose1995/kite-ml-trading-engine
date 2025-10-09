@@ -1,6 +1,6 @@
-from .base import Indicator
 
-class EMAIndicator(Indicator):
+
+class EMAIndicator:
     """
     Computes the Exponential Moving Average (EMA).
     """
@@ -9,13 +9,15 @@ class EMAIndicator(Indicator):
         :param data: DataFrame with price data.
         :param period: Period for EMA.
         """
-        super().__init__(column)
+        self.column = column
         self.period = period
 
-    def compute(self, df):
+    def ema_calc(self, df, period=None):
         """
         Compute the EMA and add it as a new column.
         :return: DataFrame with EMA column added.
         """
+        if period is not None:
+            self.period = period
         df[f'EMA_{self.period}'] = df[self.column].ewm(span=self.period, adjust=False).mean()
         return df

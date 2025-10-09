@@ -22,7 +22,9 @@ if __name__ == "__main__":
         "scikit-learn",  # For machine learning models
         "statsmodels",  # For statistical models
         "requests",  # For HTTP requests
-        "tabulate"  # For pretty-printing tables
+        "tabulate",  # For pretty-printing tables
+        "mpld3",  # For interactive matplotlib plots
+        "plotly" # For interactive plots
     ]
 
     for pkg in packages:

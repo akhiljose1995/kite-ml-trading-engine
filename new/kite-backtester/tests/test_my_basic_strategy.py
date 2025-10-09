@@ -27,9 +27,9 @@ def kite_data():
     for token in config.INSTRUMENT_TOKENS:
         df = loader.get_data(
             instrument_token=token,
-            from_date=datetime.datetime(2025, 5, 19),
-            to_date=datetime.datetime(2025, 5, 28, 10, 30, 0),
-            interval="15minute"
+            from_date=datetime.datetime(2025, 5, 1),
+            to_date=datetime.datetime(2025, 6, 17),
+            interval="60minute"
         )
         df.reset_index(inplace=True)
         data_dict[token] = df
@@ -85,6 +85,9 @@ def test_basic_strategy_with_real_data(kite_data):
 
     # You can also export to CSV for review if needed:
     result_df.to_csv("strategy_signals_output.csv", index=False)
+
+    # Save the original data for reference
+    df.to_csv("kite_data_output.csv", index=False)
 
     # Basic assertion just to ensure output exists
     assert not result_df.empty
