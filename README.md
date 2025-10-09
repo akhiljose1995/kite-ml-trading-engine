@@ -1,2 +1,2 @@
 # trading_automation
-A modular and extensible backtesting framework for intraday trading strategies using Zerodha's Kite Connect API. Includes EMA crossover strategy, historical data handling, portfolio simulation, and analysis tools. Ideal for testing, optimizing, and visualizing algorithmic trading strategies before deploying live.
+Developed an intraday trading automation system using Zerodha Kite Connect with end-to-end workflow including historical data extraction, technical indicators (RSI, MACD, ADX, BBW), custom candlestick pattern analysis, volume normalization, and ML-based prediction using XGBoost. Achieved 57% accuracy and 62% F1 score on 2025 market data.
