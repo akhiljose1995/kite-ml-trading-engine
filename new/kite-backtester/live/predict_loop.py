@@ -1,10 +1,9 @@
-# live/predict_loop.py
-
 import datetime
 import time
 import traceback
-import pandas as pd
 from typing import Optional
+
+import pandas as pd
 
 from live.fetcher import LiveFetcher
 from live.feature_builder import FeatureBuilder
@@ -19,9 +18,18 @@ except Exception:
 
 class LivePredictLoop:
     """
-    Continuously fetches OHLC data, builds features, preprocesses inputs,
-    generates model predictions, and optionally alerts via Telegram.
+    Continuous live prediction loop:
+    Fetch → Feature Build → Preprocess → Predict → Sleep until next candle.
+    Guarantees accurate candle scheduling for 1m/5m/15m/60m intervals.
     """
+
+    INTERVAL_MAP = {
+        "1minute": 1,
+        "3minute": 3,
+        "5minute": 5,
+        "15minute": 15,
+        "60minute": 60
+    }
 
     def __init__(
         self,
@@ -30,26 +38,13 @@ class LivePredictLoop:
         model_path: str,
         encoder_dir: str = "models/encoders",
         scaler_dir: str = "models/scalers",
-        sleep_seconds: int = 10,
         telegram_enabled: bool = False,
-        telegram_chat_id: Optional[str] = None
+        telegram_chat_id: Optional[str] = None,
     ):
-        """
-        Args:
-            instrument_token (int): Kite token for stock/option.
-            interval (str): One of ["5minute", "15minute", "60minute"].
-            model_path (str): Path to saved trained model .pkl.
-            encoder_dir (str): Directory of saved encoders.
-            scaler_dir (str): Directory of saved scalers.
-            sleep_seconds (int): Delay between polling cycles.
-            telegram_enabled (bool): Enable Telegram alerts.
-            telegram_chat_id (str): Chat ID if Telegram enabled.
-        """
         self.instrument_token = instrument_token
         self.interval = interval
-        self.sleep_seconds = sleep_seconds
 
-        # Core components
+        # Core engine
         self.fetcher = LiveFetcher(instrument_token, interval)
         self.builder = FeatureBuilder()
         self.predict_engine = PredictEngine(model_path=model_path)
@@ -63,85 +58,77 @@ class LivePredictLoop:
         self.bot = TelegramBot() if (telegram_enabled and TelegramBot) else None
         self.chat_id = telegram_chat_id
 
-    # --------------------------------------------------------------------
+        if self.interval not in self.INTERVAL_MAP:
+            raise ValueError(f"Unsupported interval: {self.interval}")
 
-    def sleep_until_next_candle(interval: str):
-        now = datetime.datetime.now()
+    # =====================================================================
+    # TIME / SCHEDULING
+    # =====================================================================
 
-        minute = now.minute
-        second = now.second
-        micro = now.microsecond
+    def get_next_candle_time(self, last_ts: datetime.datetime) -> datetime.datetime:
+        """Compute next candle close time based on the interval."""
+        step = self.INTERVAL_MAP[self.interval]
+        return last_ts + datetime.timedelta(minutes=step)
 
-        if interval == "5minute":
-            step = 5
-        elif interval == "15minute":
-            step = 15
-        elif interval == "60minute":
-            step = 60
-        else:
-            step = 5
-
-        # Compute next candle minute mark
-        next_minute = (minute // step + 1) * step
-
-        # If next_minute hits 60, roll over hour
-        delta_minutes = next_minute - minute
-        if next_minute == 60:
-            next_time = now.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(hours=1)
-        else:
-            next_time = now.replace(minute=next_minute, second=0, microsecond=0)
-
-        sleep_seconds = (next_time - now).total_seconds()
-
-        print(f"⏳ Sleeping for {sleep_seconds:.1f} seconds until next {interval} candle closes at {next_time}.")
-        time.sleep(max(1, sleep_seconds))
-
-    # --------------------------------------------------------------------
-
-    def run_once(self) -> Optional[dict]:
+    def sleep_until(self, target_time: datetime.datetime):
         """
-        Runs a single prediction cycle:
-        Fetch → Build features → Preprocess → Predict last candle.
+        Sleep until target_time with drift correction and 1-sec granularity.
+        Handles microsecond precision.
+        """
+        while True:
+            now = datetime.datetime.now()
+            delta = (target_time - now).total_seconds()
 
-        Returns:
-            dict with prediction results, or None if failed.
+            if delta <= 0:
+                return
+
+            # Avoid long blocking sleep; correct drift in smaller hops
+            time.sleep(min(delta, 1))
+
+    # =====================================================================
+    # PREDICTION LOGIC
+    # =====================================================================
+
+    def run_once(self, raw_df: pd.DataFrame) -> Optional[dict]:
+        """
+        Executes a single prediction cycle using provided raw candle DataFrame.
         """
         try:
-            # Step 1: Fetch last candles
-            raw_df = self.fetcher.get_recent_ohlc()
-            if raw_df is None or raw_df.empty:
-                print("⚠️ No data fetched. Retrying...")
-                return None
-
-            # Step 2: Build feature-engineered frame
+            # Step 1: Feature engineering
             feat_df = self.builder.build(raw_df)
 
-            # Step 3: Only last row is used for prediction
+            # Step 2: Predict last completed candle
             last_row_df = feat_df.tail(1).copy()
 
-            # Step 4: Preprocess for inference
+            # Step 3: Preprocess
             X = self.preprocessor.transform_for_prediction(last_row_df)
 
-            # Step 5: Predict label + probability
+            # Step 4: Prediction
             pred_label, pred_prob = self.predict_engine.predict(X)
 
+            ts = (
+                last_row_df["date"].iloc[-1]
+                if "date" in last_row_df.columns
+                else None
+            )
+
             result = {
-                "timestamp": last_row_df["date"].iloc[-1] if "date" in last_row_df else None,
+                "timestamp": ts,
                 "prediction": pred_label,
                 "probability": pred_prob,
-                "interval": self.interval
+                "interval": self.interval,
             }
 
-            # Print result
+            # Print nicely
             print("\n============================")
             print("🔮 LIVE PREDICTION RESULT")
             print("============================")
             print(result)
             print("============================\n")
 
-            # Optional: Telegram alert
+            # Telegram alert
             if self.telegram_enabled and self.bot and self.chat_id:
-                self.bot.send_message(self.chat_id, f"Prediction: {result}")
+                self.bot.send_message(self.chat_id, f"Prediction:\n{result}")
 
             return result
 
@@ -150,24 +137,65 @@ class LivePredictLoop:
             print(traceback.format_exc())
             return None
 
-    # --------------------------------------------------------------------
+    # =====================================================================
+    # MAIN LOOP
+    # =====================================================================
 
     def run_forever(self):
         """
-        Infinite loop: runs prediction every sleep_seconds.
-        Ideal for local script OR background FastAPI task.
+        Continuous:
+            - Fetch last completed candle
+            - Predict it
+            - Sleep until next candle close
         """
         print("\n🚀 Live Prediction Loop Started...\n")
 
         while True:
             try:
-                self.run_once()
-                # Sleep exactly until next candle close
-                self.sleep_until_next_candle(self.interval)
+                # ==========================================================
+                # Fetch recent OHLC candles
+                # ==========================================================
+                raw_df = self.fetcher.get_recent_ohlc()
+
+                if raw_df is None or raw_df.empty:
+                    print("⚠️ No data received. Retrying in 1s...")
+                    time.sleep(1)
+                    continue
+
+                # ==========================================================
+                # Last completed candle timestamp
+                # ==========================================================
+                last_ts = raw_df["date"].iloc[-1]
+                now = datetime.datetime.now()
+
+                # Compute official next candle time
+                next_ts = self.get_next_candle_time(last_ts)
+
+                # ==========================================================
+                # Case 1: Candle just closed → Predict it
+                # ==========================================================
+                if now < next_ts:
+                    print(f"📊 Predicting candle: {last_ts}")
+                    self.run_once(raw_df)
+
+                    print(f"⏳ Next candle at {next_ts}")
+                    self.sleep_until(next_ts)
+                    continue
+
+                # ==========================================================
+                # Case 2: Clock is ahead of data (delayed API candle)
+                # Just refetch until aligned
+                # ==========================================================
+                else:
+                    print("⚠️ API delay detected. Waiting for fresh candle...")
+                    time.sleep(1)
+                    continue
+
             except KeyboardInterrupt:
-                print("\n🛑 Live loop stopped manually.")
+                print("\n🛑 Live Loop Stopped Manually.")
                 break
+
             except Exception as e:
-                print("❌ Fatal error:", e)
+                print("❌ FATAL ERROR in main loop:", e)
                 print(traceback.format_exc())
-                time.sleep(self.sleep_seconds)
+                time.sleep(1)
