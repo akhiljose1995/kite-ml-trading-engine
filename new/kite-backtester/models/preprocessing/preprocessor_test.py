@@ -67,6 +67,8 @@ class PreprocessorTest:
                             "EMA_20", "EMA_20_dist_to_price", "EMA_50",
                             "EMA_50_dist_to_price", "EMA_200", "EMA_200_dist_to_price",
                             "Distance_EMA_20_EMA_50", "Distance_EMA_50_EMA_200", "Distance_EMA_20_EMA_200"]
+        if "vol_zscore" not in df.columns:
+            numerical_col_list.remove("vol_zscore")
         for col in self.data_cleaner.get_columns_by_keywords(keywords=["ATR", "BBW"]):
             if "Percent" in col:
                 numerical_col_list.append(col)

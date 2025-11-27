@@ -48,14 +48,27 @@ class OptionChainTracker:
     def parse_snapshot(self, rows):
         try:
             snapshot = {}
+            error_strike = ""
             for row in rows:
+                call_index = 0
+                put_index = 7
+                strike_index = 4
                 cells = row.text.split()
+                #print(f"Row cells: {cells}")
                 if len(cells) >= 8:
-                    strike = cells[4]
+                    if 'P' in cells[strike_index]:
+                        strike_index += 1
+                        put_index += 1
+                        
+                    strike = cells[strike_index]
                     if strike in self.strike_list:
+                        if 'P' in cells[strike_index+1]:
+                            put_index += 1
+                        #print(f"Row cells: {cells}")
+                        error_strike = strike
                         snapshot[strike] = {
-                            "call": float(cells[0]),
-                            "put": float(cells[7])
+                            "call": float(cells[call_index]),
+                            "put": float(cells[put_index])
                         }
             #print(f"Parsed snapshot: {snapshot}")
             return snapshot

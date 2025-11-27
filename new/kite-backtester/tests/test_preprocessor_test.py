@@ -7,7 +7,7 @@ def test_preprocessor_test():
     This function loads the STATE_BANK_OF_INDIA.csv file, preprocesses it, and saves the cleaned data to CSV files.
     """ 
     # Load and preprocess
-    processor = PreprocessorTest(filepath="data/STATE_BANK_OF_INDIA_test.csv", model_type="with sideways")
+    processor = PreprocessorTest(filepath="data/NIFTY_50_test.csv", model_type="with sideways")
     target = "price_dir"
     X, y = processor.run(target=target)
 

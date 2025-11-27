@@ -4,28 +4,19 @@ import time
 from datetime import time as time1
 import os
 import threading
-import traceback
 import pandas as pd
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from kiteconnect import KiteConnect
 import json
+import traceback
 
-"""# ----------------------------
-    # 7️. Check if position still open
-    # ----------------------------
-    def check_position_open(self):
-        positions = self.kite.positions()["net"]
-        pos = next((p for p in positions if p["tradingsymbol"] == self.symbol), None)
-        return bool(pos and pos["quantity"] != 0)
-    """
 class SignalTrailTrader:
-    def __init__(self, kite, signal_file, signal_dict, qty=75, prev_candle=None):
+    def __init__(self, kite, signal_file, signal_dict, qty=75):
         self.kite = kite
         self.qty = qty
         self.signal_file = signal_file
         self.signal_dict = signal_dict
-        self.prev_candle = prev_candle if prev_candle else {"open": None, "close": None}
         self.last_signal_time = None
         self.signal_counter = 0
         self.exit_time = time1(15, 15)
@@ -52,7 +43,7 @@ class SignalTrailTrader:
     # 2. Place SELL order at Market
     # ----------------------------
     def place_sell_order(self, symbol):
-        print(f"[INFO] Placing Sell order for {symbol}")
+        print(f"[INFO] Placing SELL order for {symbol}")
         sell_order_id = self.kite.place_order(
             variety=self.kite.VARIETY_REGULAR,
             exchange=self.kite.EXCHANGE_NFO,
@@ -62,7 +53,7 @@ class SignalTrailTrader:
             product=self.kite.PRODUCT_NRML,
             order_type=self.kite.ORDER_TYPE_MARKET
         )
-        print("[INFO] Sell order placed. Waiting for execution...")
+        print("[INFO] SELL order placed. Waiting for execution...")
         avg_price = self.wait_for_execution(sell_order_id)
         return sell_order_id, avg_price
 
@@ -74,7 +65,7 @@ class SignalTrailTrader:
             order = self.kite.order_history(order_id)
             #print(f"[INFO] Checking order status: {order[-1]}")
             if order[-1]["status"] == status:
-                print(f"[INFO] Order executed @ {order[-1]}")
+                print(f"[INFO] Buy order executed @ {order[-1]}")
                 return order[-1]['average_price']
             time.sleep(0.1)
 
@@ -170,10 +161,10 @@ class SignalTrailTrader:
             print(f"[ERROR] reading signal: {e}")
         return None
 
-    def get_current_ltp(self, exchange="NFO", symbol=""):
+    def get_current_ltp(self, symbol):
         try:
             ltp_data = self.kite.ltp(f"NFO:{symbol}")
-            return ltp_data[f"{exchange}:{symbol}"]["last_price"]
+            return ltp_data[f"NFO:{symbol}"]["last_price"]
         except Exception as e:
             print(f"[ERROR] Failed to fetch LTP for {symbol}: {e}")
             return None
@@ -184,7 +175,7 @@ class SignalTrailTrader:
         final_entry_ltp = None
         buy_order_id, sl_order_id, avg_price = None, None, None
         while True:
-            ltp = self.get_current_ltp(symbol=symbol)
+            ltp = self.get_current_ltp(symbol)
             if ltp and ltp != prev_ltp:
                 ltp_history.append(ltp)
                 prev_ltp = ltp
@@ -207,104 +198,6 @@ class SignalTrailTrader:
                 sl_order_id = self.place_initial_sl(symbol, initial_sl=int(avg_price) - 2)
         return buy_order_id, avg_price, sl_order_id
 
-    def read_last_candle(self, token=256265, interval="minute"):
-        """
-        Have a while loop and keep on fetch the last candle for the given symbol and interval. Then update open and close values 
-        in self.prev_candle
-        """
-        try:
-            print(f"[START] Starting read_last_candle for token {token} at interval {interval}")
-            while True:
-                try:
-                    if datetime.now().time() >= self.exit_time:
-                        # Print message as Exiting script
-                        print("Market close time reached (3:30 PM). Exiting read_last_candle() script.")
-                        break
-                    #print(f"[INFO] Fetching last candle for token {token} at interval {interval}")
-                    from_date = datetime.now() - timedelta(days=1)
-                    to_date = datetime.now()
-                    #start_time = time.time()
-                    candles = self.kite.historical_data(
-                        instrument_token=token,
-                        from_date=from_date,
-                        to_date=to_date,
-                        interval=interval
-                    )
-                    #end_time = time.time()
-                    #print(f"Time taken to fetch last candle: {end_time - start_time} seconds")
-                    #print(f"[INFO] Fetched candles:\n")
-                    #for can in candles[-5:]:
-                    #    print(can)
-                    if candles:
-                        last_candle = candles[-1]
-                        self.prev_candle["open"] = last_candle["open"]
-                        self.prev_candle["close"] = last_candle["close"]
-                        #print(f"[CANDLE] Updated last candle for {token}: {self.prev_candle}")
-                    time.sleep(5)
-                except Exception as e:
-                    print(f"[ERROR] fetching last candle for {token}: {traceback.format_exc()}")
-                    time.sleep(5)
-        except Exception as e:
-            print(f"[ERROR] reading last candle: {e}")
-
-    def check_entry_breakout(self, signal):
-        try:
-            index_token = signal["index_symbol"]
-            strike_token = signal["tradingsymbol"]
-            if signal["index_symbol"].lower() == "nifty50":
-                index_token = "256265"       # Underlying instrument (e.g., "NIFTY 50", "NIFTY BANK")
-                symbol = "NIFTY 50"
-            elif signal["index_symbol"].lower() == "niftybank":
-                index_token = "260105"
-            elif signal["index_symbol"].lower() == "sensex":
-                index_token = "265"
-            signal_time = signal["datetime"]
-            timeout_time = signal_time + timedelta(minutes=3)
-
-            # Wait until strike open > prev_max or timeout
-            while datetime.now() < timeout_time:
-                try:
-                    signal_minute = datetime.now().minute                   
-                    current_minute = datetime.now().minute
-                    stream_minute = datetime.now().minute
-                    while current_minute == stream_minute:
-                        current_ltp = self.kite.ltp(index_token)[index_token]["last_price"]
-                        if "CE" in strike_token:
-                            prev_actual = round(float(max(self.prev_candle["open"], self.prev_candle["close"])), 2)
-                            prev = (1-0.00001) * prev_actual  # 0.01% slippage
-                        elif "PE" in strike_token:
-                            prev_actual = round(float(min(self.prev_candle["open"], self.prev_candle["close"])), 2)
-                            prev = (1+0.00001) * prev_actual  # 0.01% slippage
-
-                        #print(f"[INFO] Signal {strike_token}, {signal["index_symbol"]} Previous (open/close): {prev_actual}, Current ltp: {current_ltp}")
-
-                        if ("CE" in strike_token and current_ltp > prev) or \
-                        ("PE" in strike_token and current_ltp < prev):
-                            print(f"[INFO] Entry condition met for {strike_token} | curr ltp:{current_ltp} | prev(with slippage):{prev}")
-                            return "enter"
-                        time.sleep(0.1)
-                        stream_minute = datetime.now().minute
-                except Exception as e:
-                    print(f"[ERROR] Exception while checking breakout: {traceback.format_exc()}")
-                    if "Read timed out" in str(e):
-                        print(f"[WARN] Read timed out while fetching data. Retrying...")
-                        time.sleep(0.1)
-                        continue
-                    else:
-                        return "exit"
-
-                current_minute = datetime.now().minute
-                while current_minute <= signal_minute:
-                    time.sleep(0.1)
-                    current_minute = datetime.now().minute
-
-            print(f"[INFO] Timeout: No breakout within 3 minutes.")
-            return "exit"
-
-        except Exception as e:
-            print(f"[ERROR] Exception in check_entry_breakout: {e}")
-            return "exit"
-
     def trail_sl_until_exit(self, signal_id, signal_dict, actual_trading=False, exit=False):
         signal = signal_dict[signal_id]
         print(f"[START TRAIL] Signal ID {signal_id}: {signal}")
@@ -321,16 +214,32 @@ class SignalTrailTrader:
         prev_ltp = entry_ltp
 
         while True:
-            ltp = self.get_current_ltp(symbol=symbol)
+            ltp = self.get_current_ltp(symbol)
             if ltp is None:
                 time.sleep(0.1)
                 continue
 
             #print(f"[TRACK] {symbol} LTP: {ltp}, SL: {sl}")
 
-            if ltp > prev_ltp:
+            # Exit when ltp reaches above prev_ltp+2
+            if ltp > entry_ltp+2:
+                # First cancel already open order
+                print(f"[EXIT CHECK] LTP {ltp} crossed exit threshold {prev_ltp+2}")
+                cancelled = self.cancel_the_order(sl_order_id)
+                self.wait_for_execution(sl_order_id, status="CANCELLED")
+                cancelled_order_status = self.get_order_data(order_id=sl_order_id, value="status")
+                print(f"[CANCELLED] {symbol} SL Order Status: {cancelled_order_status}")
+                print(f"[EXIT CHECK] Exiting at market as LTP crossed exit threshold.")
+                sell_order_id, avg_price = self.place_sell_order(symbol)
+                sl_order_id = sell_order_id
+                self.wait_for_execution(sell_order_id, status="COMPLETE")
+                exit_order_status = self.get_order_data(order_id=sell_order_id, value="status")
+                print(f"[CHECK EXIT] {symbol} SL Order Status: {exit_order_status}")
+                
+
+            elif ltp > prev_ltp:
                 #delta = int(ltp - prev_ltp)
-                sl = max(round(ltp - 3, 1), sl)
+                sl = round(ltp-1, 1)
                 signal["sl"] = sl
                 exit_order_status = self.get_order_data(order_id=sl_order_id, value="status")
                 if exit_order_status != "COMPLETE":
@@ -342,18 +251,12 @@ class SignalTrailTrader:
                         if modify_sl_limit_count >= 3:
                             print(f"[SL CANCEL] Max modifications reached. Cancelling SL order.")
                             cancelled = self.cancel_the_order(sl_order_id)
-                            self.wait_for_execution(sl_order_id, status="CANCELLED")
-                            cancelled_order_status = self.get_order_data(order_id=sl_order_id, value="status")
-                            print(f"[CANCELLED] {symbol} SL Order Status: {cancelled_order_status}")
                             print(f"[SL CANCEL] Exiting at market as max modifications reached.")
                             sell_order_id, avg_price = self.place_sell_order(symbol)
-                            sl_order_id = sell_order_id
-                            self.wait_for_execution(sell_order_id, status="COMPLETE")
-                            exit_order_status = self.get_order_data(order_id=sell_order_id, value="status")
-                            print(f"[CHECK EXIT] {symbol} SL Order Status: {exit_order_status}")
                 prev_ltp = ltp
 
             exit_order_status = self.get_order_data(order_id=sl_order_id, value="status")
+            print(f"[CHECK EXIT] {symbol} SL Order Status: {exit_order_status}")
             if datetime.now().time() >= self.exit_time or \
                 exit_order_status == "COMPLETE":
             #if ltp < sl or \
@@ -368,7 +271,7 @@ class SignalTrailTrader:
                 signal["exit_order_status"] = exit_order_status
                 print(f"[EXIT] {symbol} exited at SL: {sl}, PnL: {signal['pnl']}")
                 index_symbol = signal["index_symbol"]
-                filename = f"oi_data/real/{index_symbol}_pnl_{datetime.now().date()}.csv"
+                filename = f"oi_data/manual/{index_symbol}_pnl_{datetime.now().date()}.csv"
                 df = pd.DataFrame([signal])  # signal is a dictionary with all required fields
 
                 if not os.path.exists(filename):
@@ -379,10 +282,6 @@ class SignalTrailTrader:
                 print(f"[LOG] Signal exit data saved to {filename}")
                 if datetime.now().time() >= self.exit_time:
                     print("Market close time reached (3:30 PM). Exiting script.")
-                break
-
-            if datetime.now().time() >= self.exit_time:
-                print("Market close time reached (3:30 PM). Exiting script.")
                 break
             time.sleep(0.1)
 
@@ -430,37 +329,41 @@ class SignalTrailTrader:
         last_signal_time = None
         signal_counter = 0
         #self.signal_dict = signal_dict
-        print("[START] Tracking entry signals...")
+
         while True:
-            if datetime.now().time() >= self.exit_time:
-                # Print message as Exiting script
-                print("Market close time reached (3:30 PM). Exiting track_entry_signals() script.")
-                break
-            latest_signal = self.read_latest_signal()
-            if latest_signal:
-                signal_counter += 1
-                signal_id = str(signal_counter)
-                signal_dict[signal_id] = {
-                    **latest_signal,
-                    "signal_ltp": latest_signal["ltp"],
-                    "entry_ltp": None,
-                    "buy_order_id": None,
-                    "sl_order_id": None,
-                    "exit_order_status": None,
-                    "sl": None,
-                    "track_status": "in_progress",
-                    "exit_ltp": None,
-                    "pnl": None
-                }
-                self.last_signal_time = latest_signal["datetime"]
-            time.sleep(3)
+            try:
+                if datetime.now().time() >= self.exit_time:
+                    # Print message as Exiting script
+                    print("Market close time reached (3:30 PM). Exiting track_entry_signals() script.")
+                    break
+                latest_signal = self.read_latest_signal()
+                if latest_signal:
+                    signal_counter += 1
+                    signal_id = str(signal_counter)
+                    signal_dict[signal_id] = {
+                        **latest_signal,
+                        "signal_ltp": latest_signal["ltp"],
+                        "entry_ltp": None,
+                        "buy_order_id": None,
+                        "sl_order_id": None,
+                        "exit_order_status": None,
+                        "sl": None,
+                        "track_status": "in_progress",
+                        "exit_ltp": None,
+                        "pnl": None
+                    }
+                    self.last_signal_time = latest_signal["datetime"]
+                time.sleep(3)
+            except TimeoutError:
+                print(f"[ERROR] in track_entry_signals: {traceback.format_exc()}")
+                time.sleep(1)
 
     def dispatch_sl_trailing(self, signal_dict, actual_trading=False):
         active_signals = set()
         self.signal_dict = signal_dict
         buy_order_id, avg_price, sl_order_id = None, None, None
         exit = False
-        print("[START] Dispatching SL trailing for signals...")
+
         while True:
             if datetime.now().time() >= self.exit_time:
                 # Print message as Exiting script
@@ -468,41 +371,28 @@ class SignalTrailTrader:
                 break
             for signal_id, signal in signal_dict.items():
                 if signal["track_status"] == "in_progress" and signal_id not in active_signals:
-                    try:
-                        active_signals.add(signal_id)
-                        print(f"[NEW SIGNAL] Tracking signal ID {signal_id} for {signal}")
-                        # Wait till the current minute becomes greater than signal time minute
-                        # Get minute of current time and signal time
-                        current_minute = datetime.now().minute
-                        signal_minute = signal["datetime"].minute
-                        #while current_minute <= signal_minute:
-                        #    time.sleep(0.1)
-                        #    current_minute = datetime.now().minute
+                    print(f"[NEW SIGNAL] Tracking signal ID {signal_id} for {signal}")
+                    # Wait till the current minute becomes greater than signal time minute
+                    # Get minute of current time and signal time
+                    current_minute = datetime.now().minute
+                    signal_minute = signal["datetime"].minute
+                    #while current_minute <= signal_minute:
+                    #    time.sleep(0.1)
+                    #    current_minute = datetime.now().minute
 
-                        # Check previous candle max(open/close) and compare with current candle open of the strike from index value. 
-                        # Wait till a candle open greater than previous candle max is detected or 3 minutes have passed
-                        flag = self.check_entry_breakout(signal)
-                        if flag == "exit":
-                            active_signals.add(signal_id)
-                            signal_dict[signal_id]["track_status"] = "completed"
-                            continue
-
-                        buy_order_id, avg_price, sl_order_id = self.detect_entry_ltp(signal["tradingsymbol"] , signal["signal_ltp"], actual_trading=actual_trading)
-                        updated_signal = dict(signal)  # make a copy
-                        updated_signal["entry_ltp"] = avg_price
-                        updated_signal["buy_order_id"] = buy_order_id
-                        updated_signal["sl_order_id"] = sl_order_id
-                        signal_dict[signal_id] = updated_signal  # reassign to manager dict
-                        if not (buy_order_id and avg_price and sl_order_id):
-                            exit = True
-                            signal["track_status"] = "completed"
-                            continue
-                        p = Process(target=self.trail_sl_until_exit, args=(signal_id, signal_dict, actual_trading, exit))
-                        p.start()
-                        
-                    except Exception as e:
-                        if "Insufficient funds" in str(e):
-                            print(f"[ERROR] Insufficient funds for signal ID {signal_id}. Continuing to next signal.")
+                    buy_order_id, avg_price, sl_order_id = self.detect_entry_ltp(signal["tradingsymbol"] , signal["signal_ltp"], actual_trading=actual_trading)
+                    updated_signal = dict(signal)  # make a copy
+                    updated_signal["entry_ltp"] = avg_price
+                    updated_signal["buy_order_id"] = buy_order_id
+                    updated_signal["sl_order_id"] = sl_order_id
+                    signal_dict[signal_id] = updated_signal  # reassign to manager dict
+                    if not (buy_order_id and avg_price and sl_order_id):
+                        exit = True
+                        signal["track_status"] = "completed"
+                        continue
+                    p = Process(target=self.trail_sl_until_exit, args=(signal_id, signal_dict, actual_trading, exit))
+                    p.start()
+                    active_signals.add(signal_id)
         
             time.sleep(0.1)
 

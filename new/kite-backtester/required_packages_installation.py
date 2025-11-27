@@ -24,7 +24,11 @@ if __name__ == "__main__":
         "requests",  # For HTTP requests
         "tabulate",  # For pretty-printing tables
         "mpld3",  # For interactive matplotlib plots
-        "plotly" # For interactive plots
+        "plotly", # For interactive plots
+        "xgboost",  # For XGBoost models
+        "fastapi",  # For building APIs
+        "uvicorn",  # ASGI server for FastAPI
+        "joblib",  # For model serialization
     ]
 
     for pkg in packages:

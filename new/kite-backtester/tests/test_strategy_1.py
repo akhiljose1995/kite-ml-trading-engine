@@ -45,7 +45,7 @@ def kite_data():
     token_name_map = loader.get_instrument_names()
     
     #interval=["60minute", "15minute", "5minute"]
-    interval=["minute"]  # For testing, use only 5-minute interval
+    interval=["15minute"]  # For testing, use only 5-minute interval
     data_dict = {}
     data_limit_dict = {"60minute": 400, "15minute": 200, "5minute": 100, "minute": 50}
     for token in config.INSTRUMENT_TOKENS:
@@ -56,8 +56,8 @@ def kite_data():
         data_dict[token] = {}
         for intv in interval:
             data_dict[token][intv] = None
-            start_date=datetime.datetime(2025, 10, 7)
-            end_date=datetime.datetime(2025, 10, 10)
+            start_date=datetime.datetime(2025, 1, 1)
+            end_date=datetime.datetime(2025, 10, 31)
             current_start = start_date
             all_df = []
             while current_start < end_date:

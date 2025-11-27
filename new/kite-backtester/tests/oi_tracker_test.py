@@ -24,6 +24,7 @@ import os
 import traceback
 import logging
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import json
 
 # ==============================
 # Data Science and Visualization
@@ -724,6 +725,8 @@ def set_oi_support_and_resistance(kite_obj, web_oi_data: dict, raw_historical_da
         #latest_CE_OI = raw_historical_data_store["atm_ce"][-1]['oi'] if raw_historical_data_store.get("atm_ce") else None
         latest_PE_OI = atm_pe_data[-1] if len(atm_pe_data)>=1 else None
         latest_CE_OI = atm_ce_data[-1] if len(atm_ce_data)>=1 else None
+        pe_oi_dict["atm_pe"] = latest_PE_OI
+        ce_oi_dict["atm_ce"] = latest_CE_OI
 
         try:
             #ATM_PE_OI_PREV = raw_historical_data_store["atm_pe"][-2]['oi'] if raw_historical_data_store.get("atm_pe") else None
@@ -1429,18 +1432,29 @@ def telegram_bot_send_signal(ltp=None):
                     "index_symbol": index_symbol,
                     "datetime": date,
                     "tradingsymbol": ATM_TRADESYMBOL,
+                    "ce_oi": ce_oi_dict.get("atm_ce", None),
+                    "pe_oi": pe_oi_dict.get("atm_pe", None),
+                    "oi_diff": OI_diff_between_PE_and_CE,
+                    "oi_diff_slope": ATM_OI_DIFF_SLOPE,
+                    "oi_cross_time_min": OI_DIFF_CROSS_TIME,
                     "ltp": ATM_LTP
                 }
 
                 # File path
-                file_path = "entry_signals.csv"
+                file_path = "oi_data/entry_signals.csv"
+                txt_file_path = "oi_data/entry_signals.txt"
 
                 # Write or append
                 df = pd.DataFrame([row])
                 if not os.path.exists(file_path):
                     df.to_csv(file_path, index=False)
+                    
                 else:
                     df.to_csv(file_path, mode="a", header=False, index=False)
+                
+                with open(txt_file_path, "w") as f:
+                    f.write(json.dumps(row))
+
                 tgram_bot = TelegramBot()
                 response = tgram_bot.send_message(message, chat_id=config.CHAT_IDS)
                 PREVIOUS_TRADESYMBOL = ATM_TRADESYMBOL
@@ -1480,6 +1494,24 @@ def calculate_pcr_for_near_strikes(num_strikes_each_side, pe_oi_data, ce_oi_data
     else:
         pcr = None
         console.print(f"[bold red]PCR for {UNDERLYING_SYMBOL} (CE: {ce_oi_sum}, PE: {pe_oi_sum}) = Undefined (CE OI is zero)[/bold red]")
+
+def wait_till_market_open():
+    """
+    Waits until the market opens (9:15 AM) before proceeding.
+    Checks the current time and sleeps in intervals until market open time is reached.
+    """
+    market_open_time = time1(9, 19)  # 9:19 AM
+    console.print(f"[bold yellow]Waiting until market opens and we have enough data by {market_open_time.strftime('%H:%M')}...[/bold yellow]")
+    while True:
+        now = datetime.now().time()
+        if now >= market_open_time:
+            console.print(f"[bold green]Market is now open! Proceeding with data fetching...[/bold green]")
+            break
+        else:
+            time_to_open = datetime.combine(datetime.today(), market_open_time) - datetime.combine(datetime.today(), now)
+            minutes, seconds = divmod(time_to_open.seconds, 60)
+            console.print(f"[yellow]Time until market open: {minutes} minutes and {seconds} seconds.[/yellow]", end='\r')
+            time.sleep(30)  # Sleep for 30 seconds before checking again
 
 def main():
     """
@@ -1564,16 +1596,19 @@ def main():
         # refresh_per_second for Live is for UI animation smoothness if any;
         # auto_refresh=False means we control update timing with time.sleep()
 
-        # Send signal to Telegram
-        tgram_bot = TelegramBot()
-        message = (f"🚀 START: OI Tracker started for {UNDERLYING_SYMBOL}!")
-        response = tgram_bot.send_message(message, chat_id=config.CHAT_IDS)
-
         # Initialize OptionChainTracker for background OI data fetching
         web_session_obj = WebDriverSession()
         web_session_obj.login_zerodha()
         web_session = web_session_obj.get_driver()
         oi_tracker = OptionChainTracker(driver=web_session, index_symbol=index_symbol)
+
+        # Wait till 9:19 AM to start fetching data
+        wait_till_market_open()
+
+        # Send signal to Telegram
+        tgram_bot = TelegramBot()
+        message = (f"🚀 START: OI Tracker started for {UNDERLYING_SYMBOL}!")
+        response = tgram_bot.send_message(message, chat_id=config.CHAT_IDS)
         
         with Live(console=console, refresh_per_second=10, auto_refresh=False) as live: 
             while True:

@@ -112,6 +112,8 @@ class DataCleaner:
         """
         Filters the DataFrame to keep only selected columns.
         """
+        if "vol_zscore" not in self.df.columns:
+            self.selected_columns.remove("vol_zscore")
         self.df = self.df[self.selected_columns].copy()
 
     def filter_rows(self, col="cdl_strength", value = "strong", condition="only") -> None:

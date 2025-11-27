@@ -90,8 +90,8 @@ class KiteDataLoader:
         df = pd.DataFrame(data)
         df["interval"] = interval
         
-        vol_indicator = Volume(df)
-        df = vol_indicator.VolumeZscore(period=14)
+        #vol_indicator = Volume(df)
+        #df = vol_indicator.VolumeZscore(period=14)
         return df
 
     def get_instrument_names(self):
