@@ -1,0 +1,44 @@
+instruments:
+  nifty50:
+    token: 256265
+    symbol: NIFTY 50
+    exchange: NSE
+    type: index
+    timezone: Asia/Kolkata
+    tick_size: 0.05
+    option_expiry: weekly
+    expiry_day: tuesday
+  
+  sensex:
+    token: 304001
+    symbol: SENSEX
+    exchange: BSE
+    type: index
+    timezone: Asia/Kolkata
+    tick_size: 0.05
+    option_expiry: weekly
+    expiry_day: thursday
+
+  banknifty:
+    token: 260105
+    symbol: BANK NIFTY
+    exchange: NSE
+    type: index
+    timezone: Asia/Kolkata
+    tick_size: 0.05
+    option_expiry: monthly
+    expiry_day: last_thursday
+
+  reliance:
+    symbol: RELIANCE
+    exchange: NSE
+    type: stock
+    timezone: Asia/Kolkata
+    tick_size: 0.05
+
+  eurusd:
+    symbol: EURUSD
+    exchange: FOREX
+    type: forex
+    timezone: UTC
+    tick_size: 0.0001

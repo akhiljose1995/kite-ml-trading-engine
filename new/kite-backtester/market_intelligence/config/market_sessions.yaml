@@ -1,0 +1,16 @@
+sessions:
+  NSE:
+    timezone: Asia/Kolkata
+    market_open: "09:15"
+    market_close: "15:30"
+    pre_open_start: "09:00"
+    market_days: [0, 1, 2, 3, 4]  # Monday to Friday
+    holidays:
+      - "2026-01-26"
+      - "2026-03-25"
+
+  FOREX:
+    timezone: UTC
+    market_open: "00:00"
+    market_close: "23:59"
+    holidays: []

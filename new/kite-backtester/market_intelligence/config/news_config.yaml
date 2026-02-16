@@ -1,0 +1,9 @@
+news:
+  enabled: false
+  provider: newsdata_io
+  api_key: ""
+  max_results: 10
+  language: en
+  country:
+    india: in
+    us: us

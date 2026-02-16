@@ -1,0 +1,16 @@
+llm:
+  enabled: false
+  provider: openai
+  model: gpt-5.1
+  temperature: 0.2
+  max_tokens: 10000
+  timeout_sec: 30
+
+  history:
+    enabled: true
+    max_turns: 10
+
+  cost_guard:
+    enabled: true
+    max_daily_tokens: 10000
+    max_prompt_tokens: 10000
