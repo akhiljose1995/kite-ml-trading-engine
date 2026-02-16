@@ -27,5 +27,5 @@ class Volume:
         """
         rolling_mean = self.df['volume'].rolling(window=period).mean()
         rolling_std = self.df['volume'].rolling(window=period).std()
-        self.df['vol_zscore'] = (self.df['volume'] - rolling_mean) / rolling_std
+        self.df['vol_zscore'] = round((self.df['volume'] - rolling_mean) / rolling_std, 2)
         return self.df

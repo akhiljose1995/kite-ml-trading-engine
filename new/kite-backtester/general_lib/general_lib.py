@@ -52,6 +52,6 @@ class GeneralLib:
 
 
     # Example usage
-    data = [8, 3, 7, 5, 1]
-    print("25th percentile:", calculate_quantile(data, 0.25))
-    print("60th percentile:", calculate_quantile(data, 0.6))
+    #data = [8, 3, 7, 5, 1]
+    #print("25th percentile:", calculate_quantile(data, 0.25))
+    #print("60th percentile:", calculate_quantile(data, 0.6))

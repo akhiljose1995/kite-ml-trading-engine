@@ -80,7 +80,7 @@ class RSIIndicator(Indicator):
 
             price_index += 1
 
-        df[f'RSI_{self.period}'] = rsi
+        df[f'RSI_{self.period}'] = round(pd.Series(rsi), 2)
         
         """ # RSI plot
         plt.subplot(2, 1, 2)

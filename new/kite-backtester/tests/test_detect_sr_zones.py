@@ -45,50 +45,29 @@ def kite_data():
         print("#" * 50)
         data_dict[token] = {}
         for intv in interval:
-            if intv not in available_interval:
-                req_intv, intv = intv, "15minute" # Default to 15-minute if desired interval not available
-            data_dict[token][intv] = None
-            # Set start as 1 month ago from today
-            days=30
-            if req_intv == "1D":
-                days=365
-            #start_date=datetime.datetime.now() - datetime.timedelta(days=days)
-            start_date=datetime.datetime(2024, 1, 1)
+            days = 365
+            start_date=datetime.datetime.now() - datetime.timedelta(days=days)
+            #start_date=datetime.datetime(2026, 2, 3)
             # make end date as current date + 1 minute to ensure we get the latest data
             end_date=datetime.datetime.now() + datetime.timedelta(minutes=1)
             #end_date=datetime.datetime(2026, 1, 31)
-            current_start = start_date
-            all_df = []
-            while current_start < end_date:
-                current_end = min(current_start + datetime.timedelta(days=data_limit_dict[intv]), end_date)
-
-                print(f"Fetching {intv} data for {token_name} from {current_start.date()} to {current_end.date()}")
-                df = loader.get_data(
+            df = loader.get_data(
                     instrument_token=token,
-                    from_date=current_start,
-                    to_date=current_end,
+                    from_date=start_date,
+                    to_date=end_date,
                     interval=intv)
-                # Check if date columns format is correct
-                #if not df.empty:
-                #    print("Checking date column format...")
-                #    print("Date column dtype:", df["date"].dtype)
-                #    assert pd.api.types.is_datetime64_any_dtype(df["date"]), "Date column is not in datetime format."
-
-                all_df.append(df)
-                current_start = current_end + datetime.timedelta(days=1)
-
-            combined_df = pd.concat(all_df, ignore_index=True)
-            # if requested interval is not available, convert from 15-minute to desired interval
-            if req_intv not in available_interval:
-                print(f"Converting from {intv} to {req_intv}...")
-                converter = TimeframeConverter(combined_df)
-                combined_df = converter.convert(req_intv)
-                combined_df.reset_index(inplace=True)  # Ensure 'date' column is available after conversion
-            
+            # Check if date columns format is correct
+            #if not df.empty:
+            #    print("Checking date column format...")
+            #    print("Date column dtype:", df["date"].dtype)
+            #    assert pd.api.types.is_datetime64_any_dtype(df["date"]), "Date column is not in datetime format."
+        
             # Print the last few rows of the dataframe for debugging
             #print(f"Data for {token_name} at interval {intv}:")
-            #print(combined_df)
-            data_dict[token][intv] = combined_df
+            #print(df.tail())
+            data_dict[token][intv] = df
+            # save to csv for debugging
+            #df.to_csv(f"debug_{token_name}_{intv}.csv", index=False)
         
     return data_dict, token_name_map
 

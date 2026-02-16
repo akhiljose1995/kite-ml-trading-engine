@@ -18,8 +18,10 @@ from indicators.atr import ATRIndicator
 from indicators.bbw import BBWIndicator
 from indicators.divergence_detector import DivergenceDetector
 from indicators.candle_patterns import CandlePatternDetector
+from indicators.trendlines_with_breaks import TrendlinesWithBreaks
 from strategy.candle_pattern import CandlePatternStrategy
 from strategy.ema import EMA
+from general_lib.convert_timeframe import TimeframeConverter
 from telegram_bot.telegram_bot import TelegramBot
 import pandas as pd
 
@@ -44,10 +46,10 @@ def kite_data():
     )
     token_name_map = loader.get_instrument_names()
     
-    #interval=["60minute", "15minute", "5minute"]
+    available_interval=["60minute", "15minute", "10minute","5minute", "3minute", "minute", "1D"]
     interval=["15minute"]  # For testing, use only 5-minute interval
     data_dict = {}
-    data_limit_dict = {"60minute": 400, "15minute": 200, "5minute": 100, "minute": 50}
+    data_limit_dict = {"1D": 200, "60minute": 400, "15minute": 200, "5minute": 100, "minute": 50}
     for token in config.INSTRUMENT_TOKENS:
         token_name = token_name_map.get(token, f"Token_{token}")
         print("#" * 50)
@@ -56,23 +58,33 @@ def kite_data():
         data_dict[token] = {}
         for intv in interval:
             data_dict[token][intv] = None
-            start_date=datetime.datetime(2025, 1, 1)
-            end_date=datetime.datetime(2025, 10, 31)
-            current_start = start_date
-            all_df = []
-            while current_start < end_date:
-                current_end = min(current_start + datetime.timedelta(days=data_limit_dict[intv]), end_date)
+            # Set start as 1 month ago from today
+            days=7
+            if intv == "1D":
+                days=365
+            start_date=datetime.datetime.now() - datetime.timedelta(days=days)
+            #start_date=datetime.datetime(2026, 2, 9)
+            # make end date as current date + 1 minute to ensure we get the latest data
+            end_date=datetime.datetime.now() + datetime.timedelta(minutes=1)
+            #end_date=datetime.datetime(2026, 1, 31)
+            
+            print(f"Fetching {intv} data for {token_name} from {start_date.date()} to {end_date.date()}")
+            df = loader.get_data(
+                instrument_token=token,
+                from_date=start_date,
+                to_date=end_date,
+                interval=intv)
+            # Check if date columns format is correct
+            #if not df.empty:
+            #    print("Checking date column format...")
+            #    print("Date column dtype:", df["date"].dtype)
+            #    assert pd.api.types.is_datetime64_any_dtype(df["date"]), "Date column is not in datetime format."
 
-                print(f"Fetching {intv} data for {token_name} from {current_start.date()} to {current_end.date()}")
-                df = loader.get_data(
-                    instrument_token=token,
-                    from_date=current_start,
-                    to_date=current_end,
-                    interval=intv)
-                all_df.append(df)
-                current_start = current_end + datetime.timedelta(days=1)
-            combined_df = pd.concat(all_df, ignore_index=True)
-            data_dict[token][intv] = combined_df
+            
+            # Print the last few rows of the dataframe for debugging
+            #print(f"Data for {token_name} at interval {intv}:")
+            #print(df)
+            data_dict[token][intv] = df
         
     return data_dict, token_name_map
 
@@ -91,7 +103,7 @@ def test_indicator_and_pattern_strategy(kite_data):
                 print(f"No data for {token} at interval {intv}")
                 continue
 
-            # EMA 20
+            """ # EMA 20
             ema_20 = EMAIndicator()
             df = ema_20.ema_calc(df, period=20)
 
@@ -162,9 +174,25 @@ def test_indicator_and_pattern_strategy(kite_data):
             # BBW
             for period in bbw_period:
                 bbw = BBWIndicator(period=period)
-                df = bbw.compute(df)
+                df = bbw.compute(df) """
             
-            # Step 1: Detect patterns
+            # 
+            # Initialize indicator 
+            tl = TrendlinesWithBreaks(df, length=3, mult=1.0, method='Atr') 
+            # Compute trendlines and breakouts 
+            result = tl.compute() 
+            print("\n=== Trendline Output ===")
+             
+            print(result[['date', 'upper', 'lower', 'up_break', 'dn_break']]) 
+            # Compute follow-through 
+            follow = tl.breakout_followthrough(lookahead=3) 
+            print("\n=== Breakout Follow-Through ===") 
+            print(follow)
+
+            # Plot 
+            tl.plot()
+            
+            """ # Step 1: Detect patterns
             cdl_detector = CandlePatternDetector(df)
             pattern_df = cdl_detector.detect_patterns()
 
@@ -189,7 +217,15 @@ def test_indicator_and_pattern_strategy(kite_data):
             assert isinstance(example_row["price_chg"], float)
             #assert example_row["price_dir"] in ["up", "down", "sideways"]
 
-            all_dfs.append(result_df)
+            # step 6: Check if date is in datetime format
+            print("Checking date column format...")
+            print("Date column dtype:", result_df["date"].dtype)
+            assert pd.api.types.is_datetime64_any_dtype(result_df["date"]), "Date column is not in datetime format."
+
+            print(f"Data for {stock_name} at interval {intv}:")
+            print(result_df[["date", "candle", "cdl_implication", "cdl_strength", "cdl_direction", "price_chg", "price_dir"]].tail(25)) """
+
+            all_dfs.append(df)
         
         combined_df = pd.concat(all_dfs, ignore_index=True)
 
@@ -198,12 +234,12 @@ def test_indicator_and_pattern_strategy(kite_data):
         combined_df.to_csv(f"{stock_name_csv}.csv", index=False)
 
         # print last 25 rows for debugging
-        print("=" * 50)
-        print("STOCK NAME:", stock_name)
-        print("-" * 25)
-        print("INTERVAL:", intv)
-        print("-" * 25)
-        print(combined_df.tail(50)[["date", "candle", "cdl_implication", "cdl_strength", "cdl_direction", "price_chg", "price_dir"]])
+        #print("=" * 50)
+        #print("STOCK NAME:", stock_name)
+        #print("-" * 25)
+        #print("INTERVAL:", intv)
+        #print("-" * 25)
+        #print(combined_df.tail(50)[["date", "candle", "cdl_implication", "cdl_strength", "cdl_direction", "price_chg", "price_dir"]])
 
     """tgram_bot = TelegramBot()
     message = "Hii da"

@@ -23,8 +23,8 @@ class ATRIndicator(Indicator):
         :return: DataFrame with ATR_<period> column.
         """
         atr = AverageTrueRange(high=df["high"], low=df["low"], close=df["close"], window=self.period, fillna=False)
-        df[f"ATR_{self.period}"] = atr.average_true_range()
-        df[f"ATR_{self.period}_Percent"] = df[f"ATR_{self.period}"] / df['close']  # normalize
+        df[f"ATR_{self.period}"] = round(atr.average_true_range(), 2)
+        df[f"ATR_{self.period}_Percent"] = round(df[f"ATR_{self.period}"]*100 / df['close'], 2)  # normalize
 
         # Optional plotting
         #self.plot_atr(df, self.period)

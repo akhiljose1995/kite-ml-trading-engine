@@ -1,8 +1,10 @@
 from kiteconnect import KiteConnect
 import pandas as pd
 import warnings
+import datetime
 from indicators.volume import Volume
 import os
+from general_lib.convert_timeframe import TimeframeConverter
 # Rich library imports for enhanced terminal output
 from rich.console import Console, Group
 from html2image import Html2Image
@@ -52,7 +54,7 @@ class KiteDataLoader:
 
             data = self.kite.generate_session(request_token, api_secret=api_secret)
             self.kite.set_access_token(data["access_token"])
-            print("[INFO] Session data:", data)
+            #print("[INFO] Session data:", data)
             access_token = data["access_token"]
             print("[INFO] Access Token:", access_token)
             console.print("[bold green]Kite API session generated and access token set successfully![/bold green]")
@@ -80,20 +82,46 @@ class KiteDataLoader:
         :param interval: Candle interval (e.g., 5minute, 15minute).
         :return: DataFrame with historical OHLC data.
         """
-        data = self.kite.historical_data(
-            instrument_token=instrument_token,
-            from_date=from_date,
-            to_date=to_date,
-            interval=interval,
-            continuous=False
-        )
-        df = pd.DataFrame(data)
-        df["interval"] = interval
+        available_interval=["60minute", "30minute", "15minute", "10minute","5minute", "3minute", "minute"]
+        req_intv = interval
+        if interval not in available_interval:
+            req_intv, interval = interval, "15minute"
+        data_dict = {}
+        data_limit_dict = {"1D": 200, "60minute": 400, "30minute": 200, "15minute": 200, "5minute": 100, "3minute": 50, "minute": 25}
+        current_start = from_date
+        all_df = []
+        while current_start < to_date:
+            current_end = min(current_start + datetime.timedelta(days=data_limit_dict[interval]), to_date)
+            
+            #print(f"Fetching {interval} data for {instrument_token} from {current_start.date()} to {current_end.date()}")
+            data = self.kite.historical_data(
+                instrument_token=instrument_token,
+                from_date=current_start,
+                to_date=current_end,
+                interval=interval,
+                continuous=False
+            )
+            df = pd.DataFrame(data)
+            df["interval"] = req_intv
+            #print(df.head())
+            #print("*" * 50)
+            #print(df.tail())
+            all_df.append(df)
+            current_start = current_end + datetime.timedelta(days=0)  # Move to next day
+            
+        combined_df = pd.concat(all_df, ignore_index=True)
+        if req_intv not in available_interval:
+            #print(f"Converting from {interval} to {req_intv}...")
+            converter = TimeframeConverter(combined_df)
+            combined_df = converter.convert(req_intv)
+            combined_df.reset_index(inplace=True)  # Ensure 'date' column is available after conversion
         
+        df = combined_df.copy() # To avoid SettingWithCopyWarning when adding indicators
         #vol_indicator = Volume(df)
         #df = vol_indicator.VolumeZscore(period=14)
-        return df
 
+        return df
+        
     def get_instrument_names(self):
         """
         Load instrument names from instruments.csv

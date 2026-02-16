@@ -196,8 +196,8 @@ class CandlePatternStrategy:
             temp_df['abs_price_chg'].tolist(), 0.75)
         #threshold = non_sideways_df['abs_price_chg'].quantile(0.20)
 
-        print(f"Price Change 25th percentile for sideways detection: {q25:.2f}%")
-        print(f"Price Change 75th percentile: {q75:.2f}%")
+        #print(f"Price Change 25th percentile for sideways detection: {q25:.2f}%")
+        #print(f"Price Change 75th percentile: {q75:.2f}%")
 
         # Update price_dir to sideways if abs_price_chg is less than threshold
         #self.df.loc[non_sideways_df['abs_price_chg'] < threshold, 'price_dir'] = 'sideways'
@@ -224,8 +224,8 @@ class CandlePatternStrategy:
         self.df['price_dir'] = updated_dirs
 
         # print tail of the DataFrame for debugging
-        print("Rows with price_dir updated to sideways:")
-        print(self.df.tail(10)[['date', 'candle', 'cdl_implication', 'cdl_strength', 'cdl_direction', 'price_chg', 'price_dir']])
+        #print("Rows with price_dir updated to sideways:")
+        #print(self.df.tail(10)[['date', 'candle', 'cdl_implication', 'cdl_strength', 'cdl_direction', 'price_chg', 'price_dir']])
 
 
     def run(self, trading_type="intraday", max_lookahead=30) -> pd.DataFrame:

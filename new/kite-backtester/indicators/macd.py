@@ -24,9 +24,9 @@ class MACDIndicator(Indicator):
         """
         ema_fast = df[self.column].ewm(span=self.fast_period, adjust=False).mean()
         ema_slow = df[self.column].ewm(span=self.slow_period, adjust=False).mean()
-        df['MACD'] = ema_fast - ema_slow
-        df['MACD_Signal'] = df['MACD'].ewm(span=self.signal_period, adjust=False).mean()
-        df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
+        df['MACD'] = round(ema_fast - ema_slow, 2)
+        df['MACD_Signal'] = round(df['MACD'].ewm(span=self.signal_period, adjust=False).mean(), 2)
+        df['MACD_Hist'] = round(df['MACD'] - df['MACD_Signal'], 2)
         #self.plot_macd(df)
         return df
 

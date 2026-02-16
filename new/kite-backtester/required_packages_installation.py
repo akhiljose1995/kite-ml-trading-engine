@@ -29,6 +29,7 @@ if __name__ == "__main__":
         "fastapi",  # For building APIs
         "uvicorn",  # ASGI server for FastAPI
         "joblib",  # For model serialization
+        "git+https://github.com/kobaltgit/telegram_text_splitter.git",  # For splitting long messages for Telegram
     ]
 
     for pkg in packages:

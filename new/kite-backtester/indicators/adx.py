@@ -22,9 +22,9 @@ class ADXIndicator(Indicator):
         :return: DataFrame with ADX, +DI, and -DI columns.
         """
         adx = adxi(high=df["high"], low=df["low"], close=df["close"], window=14, fillna=False)
-        df[f"ADX_{self.period}"] = adx.adx()
-        df[f"PDI_{self.period}"] = adx.adx_pos()
-        df[f"NDI_{self.period}"] = adx.adx_neg()
+        df[f"ADX_{self.period}"] = round(adx.adx(), 2)
+        df[f"PDI_{self.period}"] = round(adx.adx_pos(), 2)
+        df[f"NDI_{self.period}"] = round(adx.adx_neg(), 2)
 
         # Add ADX Strength Label
         def adx_strength(val):
@@ -41,7 +41,8 @@ class ADXIndicator(Indicator):
 
         df[f"ADX_{self.period}_Strength_Label"] = df[f"ADX_{self.period}"].apply(adx_strength)
 
-        print("\nPlease make sure additional 30% of data is available for ADX calculation!!!")
+        # Print a warning if there are not enough data points for ADX calculation
+        #print("\nPlease make sure additional 30% of data is available for ADX calculation!!!")
 
         #self.plot_adx(df, self.period)
         return df

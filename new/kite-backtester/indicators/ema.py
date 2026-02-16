@@ -19,5 +19,5 @@ class EMAIndicator:
         """
         if period is not None:
             self.period = period
-        df[f'EMA_{self.period}'] = df[self.column].ewm(span=self.period, adjust=False).mean()
+        df[f'EMA_{self.period}'] = round(df[self.column].ewm(span=self.period, adjust=False).mean(), 2)
         return df

@@ -155,38 +155,116 @@ class CandlePatternDetector:
     def shadow_lower(self, l, o, c):
         return min(o, c) - l
 
+    def rolling_slope(self, series, window=5):
+        """
+        Computes rolling linear regression slope for a pandas Series.
+        Returns a Series aligned with the original index.
+        """
+
+        idx = np.arange(window)
+        #print(f"window: {window}, idx: {idx}")
+
+        # Shift so current row is NOT included 
+        shifted = series.shift(1)
+
+        def slope(y):
+            #print(f"Calculating slope for window: {y}")
+            m, _ = np.polyfit(idx, y, 1)
+            return m
+
+        return shifted.rolling(window).apply(slope, raw=True)
+
     def doji(self):
         body = abs(self.df['open'] - self.df['close'])
         range_ = self.df['high'] - self.df['low']
         return "doji", (body <= 0.1 * range_), self.df['open'], self.df['high'], self.df['low'], self.df['close']
 
-    def hammer(self):
-        body = abs(self.df['open'] - self.df['close'])
-        lower_shadow = self.df[['open', 'close']].min(axis=1) - self.df['low']
-        upper_shadow = self.df['high'] - self.df[['open', 'close']].max(axis=1)
-        return "hammer", ((lower_shadow > 2 * body) & (upper_shadow < body)), self.df['open'], self.df['high'], self.df['low'], self.df['close']
+    #def hammer(self):
+    #    body = abs(self.df['open'] - self.df['close'])
+    #    lower_shadow = self.df[['open', 'close']].min(axis=1) - self.df['low']
+    #    upper_shadow = self.df['high'] - self.df[['open', 'close']].max(axis=1)
+    #    return "hammer", ((lower_shadow > 2 * body) & (upper_shadow < body)), self.df['open'], self.df['high'], self.df['low'], self.df['close']
 
-    def inverted_hammer(self):
-        body = abs(self.df['open'] - self.df['close'])
-        upper_shadow = self.df['high'] - self.df[['open', 'close']].max(axis=1)
-        lower_shadow = self.df[['open', 'close']].min(axis=1) - self.df['low']
-        return "inverted_hammer", ((upper_shadow > 2 * body) & (lower_shadow < body)), self.df['open'], self.df['high'], self.df['low'], self.df['close']
+    def hammer(self, slope_window=5):
+        df = self.df.copy()
+
+        # Candle anatomy
+        body = (df['open'] - df['close']).abs()
+        lower_shadow = df[['open', 'close']].min(axis=1) - df['low']
+        upper_shadow = df['high'] - df[['open', 'close']].max(axis=1)
+
+        hammer_shape = (
+            (lower_shadow >= 2 * body) &
+            (upper_shadow <= body)
+        )
+
+        # Trend context using regression slope
+        slope = self.rolling_slope(df['close'], window=slope_window)
+        
+        # Only print the slope with the 'date' column for debugging purposes
+        #print(f"Slope values for hammer pattern:\n{pd.DataFrame({'date': df['date'], 'slope': slope , 'hammer_shape': hammer_shape})}")
+        downtrend = slope < 0
+        hammer_signal = hammer_shape & downtrend
+
+        return "hammer", hammer_signal, df['open'], df['high'], df['low'], df['close']
+
+    def inverted_hammer(self, slope_window=5):
+        df = self.df
+
+        # Candle anatomy
+        body = (df['open'] - df['close']).abs()
+        upper_shadow = df['high'] - df[['open', 'close']].max(axis=1)
+        lower_shadow = df[['open', 'close']].min(axis=1) - df['low']
+
+        # Shape: long upper wick, tiny lower wick
+        inverted_hammer_shape = (
+            (upper_shadow >= 2 * body) &
+            (lower_shadow <= body)     # lower wick small
+        )
+
+        # Trend context: must occur after a downtrend
+        slope = self.rolling_slope(df['close'], window=slope_window)
+        downtrend = slope < 0
+
+        inverted_hammer_signal = inverted_hammer_shape & downtrend
+
+        return "inverted_hammer", inverted_hammer_signal, df['open'], df['high'], df['low'], df['close']
 
     def hanging_man(self):
         _, hammer_mask, *_ = self.hammer()
-        hanging_man_mask = hammer_mask & (self.df['close'] < self.df['open'])  # Bearish body
+        
+        # Trend context using regression slope
+        slope = self.rolling_slope(self.df['close'], window=3)
+        
+        # Only print the slope with the 'date' column for debugging purposes
+        #print(f"Slope values for hanging man pattern:\n{pd.DataFrame({'date': self.df['date'], 'slope': slope , 'hammer_shape': hammer_mask})}")
+        uptrend = slope > 0
+        hanging_man_mask = hammer_mask & uptrend
+
         return "hanging_man", hanging_man_mask, self.df['open'], self.df['high'], self.df['low'], self.df['close']
     
-    def shooting_star(self):
-        body = abs(self.df['open'] - self.df['close'])
-        upper_shadow = self.df['high'] - self.df[['open', 'close']].max(axis=1)
-        lower_shadow = self.df[['open', 'close']].min(axis=1) - self.df['low']
-        
-        # Shooting star has a long upper shadow, small body near low
-        shooting_star_mask = (upper_shadow > 2 * body) & (lower_shadow < body) & (self.df['close'] < self.df['open'])
-        
-        return "shooting_star", shooting_star_mask, self.df['open'], self.df['high'], self.df['low'], self.df['close']
-    
+    def shooting_star(self, slope_window=5):
+        df = self.df
+
+        # Candle anatomy
+        body = (df['open'] - df['close']).abs()
+        upper_shadow = df['high'] - df[['open', 'close']].max(axis=1)
+        lower_shadow = df[['open', 'close']].min(axis=1) - df['low']
+
+        # Shape: long upper wick, tiny lower wick
+        shooting_star_shape = (
+            (upper_shadow >= 2 * body) &
+            (lower_shadow <= body)
+        )
+
+        # Trend context: must occur after an uptrend
+        slope = self.rolling_slope(df['close'], window=slope_window)
+        uptrend = slope > 0
+
+        shooting_star_signal = shooting_star_shape & uptrend
+
+        return "shooting_star", shooting_star_signal, df['open'], df['high'], df['low'], df['close']
+  
     def marubozu_bullish(self, threshold=0.01):
         body = abs(self.df['open'] - self.df['close'])
         range_ = self.df['high'] - self.df['low']
@@ -448,19 +526,34 @@ class CandlePatternDetector:
             (c['close'] < b['close'])                       # Closes lower than 2nd candle
         ), c['open'], c['high'], c['low'], c['close']
 
-    def two_black_gapping(self):
-        a = self.df.shift(1)  # Candle -1 (prior trend)
-        b = self.df           # Candle 0 (first black candle)
-        c = self.df.shift(-1) # Candle 1 (second black candle)
+    def two_black_gapping(self, slope_window=5):
+        df = self.df
+
+        # Candles
+        prev = df.shift(1)   # Candle -1 (before the gap)
+        c1   = df            # Candle 0 (first black candle)
+        c2   = df.shift(-1)  # Candle 1 (second black candle)
+
+        # Trend context: must be a downtrend
+        slope = self.rolling_slope(df['close'], window=slope_window)
+        downtrend = slope < 0
 
         pattern = (
-            (b['close'] < b['open']) &                    # Candle -1 is bearish
-            (c['close'] < c['open']) &                    # Candle 0 is bearish
-            (b['open'] > a['high']) &                     # Gap up from previous high
-            (c['open'] < b['close'])                      # Gap down from previous close
+            downtrend &
+
+            # Both candles must be bearish
+            (c1['close'] < c1['open']) &
+            (c2['close'] < c2['open']) &
+
+            # Gap down from previous candle
+            (c1['open'] < prev['low']) &
+
+            # Second candle closes lower than the first
+            (c2['close'] < c1['close'])
         )
 
-        return "two_black_gapping", pattern, c['open'], c['high'], c['low'], c['close']
+        return "two_black_gapping", pattern, df['open'], df['high'], df['low'], df['close']
+
 
     def abandoned_baby_bullish(self):
         prev = self.df.shift(1)

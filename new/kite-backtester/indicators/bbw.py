@@ -26,7 +26,7 @@ class BBWIndicator(Indicator):
         :return: DataFrame with BBW_<period> column.
         """
         bb = BollingerBands(close=df["close"], window=self.period, window_dev=self.std_dev, fillna=False)
-        df[f"BBW_{self.period}"] = (bb.bollinger_hband() - bb.bollinger_lband()) / df["close"]
+        df[f"BBW_{self.period}"] = round((bb.bollinger_hband() - bb.bollinger_lband()) / df["close"], 2)
 
         # Optional plotting
         #self.plot_bbw(df, self.period)

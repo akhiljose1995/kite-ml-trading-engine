@@ -16,7 +16,7 @@ class EMA:
         Compute the EMA and add it as a new column.
         :return: DataFrame with EMA column added.
         """
-        df[f'EMA_{self.period}_dist_to_price'] = df['close'] - df[f'EMA_{self.period}']
+        df[f'EMA_{self.period}_dist_to_price'] = round(df['close'] - df[f'EMA_{self.period}'], 2)
         return df
     
     def distance_between_emas(self, df, column1, column2):
@@ -27,5 +27,5 @@ class EMA:
         :param column2: Second EMA column name.
         :return: DataFrame with distance column added.
         """
-        df[f'Distance_{column1}_{column2}'] = df[column1] - df[column2]
+        df[f'Distance_{column1}_{column2}'] = round(df[column1] - df[column2], 2)
         return df

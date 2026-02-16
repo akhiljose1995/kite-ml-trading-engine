@@ -25,6 +25,13 @@ class SwingConfig:
 # -------------------------------------------------
 # Swing Detector
 # -------------------------------------------------
+timeframe_swing_params = {
+        "1D": TimeframeConfig(lookback=7, atr_period=14, atr_multiplier=0.7),
+        "60minute": TimeframeConfig(lookback=6, atr_period=14, atr_multiplier=0.6),
+        "15minute": TimeframeConfig(lookback=5, atr_period=14, atr_multiplier=0.5),
+        "5minute": TimeframeConfig(lookback=4, atr_period=14, atr_multiplier=0.4),
+        "minute": TimeframeConfig(lookback=3, atr_period=14, atr_multiplier=0.3),
+    }
 
 class SwingDetector:
     """
@@ -35,6 +42,7 @@ class SwingDetector:
     """
 
     def __init__(self, config: SwingConfig):
+        config.timeframe_params = timeframe_swing_params
         self.config = config
         self.tf_config = self._load_timeframe_config(config.interval)
 
